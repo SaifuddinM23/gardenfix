@@ -1,13 +1,15 @@
 # 🌱 GardenFix
 
 > A local AI plant-care assistant built for the **Touch Grass** open-source AI challenge.  
-> Everything runs on your own machine — no paid APIs, no cloud, no authentication.
+> Everything runs entirely on your own machine — no paid APIs, no cloud dependencies, no authentication, and 100% private.
 
 Upload a photo of your plant, tell GardenFix when you last watered it and how much sunlight it gets, and receive:
 
-- **Visible observations** – what the AI can see in your photo
-- **Possible explanations** – likely causes for any issues
-- **One practical check** – something concrete to do outside right now
+- **Plant Condition** – assessment of overall visual health (Healthy & Thriving, Mild Stress, Severe Distress / Dying)
+- **Visible Observations** – factual, non-hallucinated findings seen directly in the photo
+- **Possible Explanations** – tentative causes tailored to your watering history and sunlight
+- **One Practical Outdoor Check** – a physical check with conditional follow-up actions based on what you find
+- **Limitations Notice** – clear transparency about what cannot be determined from a photo alone
 
 ---
 
@@ -15,11 +17,11 @@ Upload a photo of your plant, tell GardenFix when you last watered it and how mu
 
 | Layer    | Technology |
 |----------|-----------|
-| Frontend | React 18 + Vite 5 (plain CSS) |
-| Backend  | Node.js + Express |
-| AI model | [Ollama](https://ollama.com) running `gemma3:4b` locally |
-| Database | none |
-| Auth     | none |
+| Frontend | React 18 + Vite 5 (system fonts, Vanilla CSS) |
+| Backend  | Node.js + Express + Multer (in-memory processing) + Sharp |
+| AI Model | [Ollama](https://ollama.com) running `gemma3:4b` locally |
+| Database | None |
+| Auth / Cloud | None (100% offline-ready) |
 
 ---
 
@@ -30,31 +32,28 @@ Upload a photo of your plant, tell GardenFix when you last watered it and how mu
 node --version   # should print v18 or higher
 ```
 
-### 2. Ollama (required for AI responses)
+### 2. Ollama & Gemma 3 Model
 
-> **⚠️ Important:** The AI analysis feature requires Ollama to be installed and the `gemma3:4b` model pulled locally. Without it the app still loads and the health check will clearly tell you what's missing — but you won't get plant diagnoses.
+> **⚠️ Important:** The AI analysis feature requires Ollama to be installed and the `gemma3:4b` model pulled locally. The app includes health checks and graceful fallbacks if Ollama is not running.
 
 **Install Ollama:**
-- macOS / Linux: https://ollama.com/download  
-- Or via Homebrew: `brew install ollama`
+- macOS / Linux / Windows: [https://ollama.com/download](https://ollama.com/download)
+- Or on macOS via Homebrew: `brew install ollama`
 
 **Verify the install:**
 ```bash
 ollama --version
 ```
 
-**Pull the required model** (~3 GB download — only needs to happen once):
+**Pull the required model** (~3.3 GB download — only needs to happen once):
 ```bash
 ollama pull gemma3:4b
 ```
-
-This is a deliberate step. We do **not** download the model automatically.
 
 **Start the Ollama daemon:**
 ```bash
 ollama serve
 ```
-Leave this running in a separate terminal while you use GardenFix.
 
 ---
 
@@ -62,17 +61,24 @@ Leave this running in a separate terminal while you use GardenFix.
 
 ```
 gardenfix/
+├── .env.example     # Environment template
+├── .gitignore       # Excludes dependencies, builds, logs, secrets
+├── LICENSE          # MIT Application License
+├── README.md
 ├── client/          # React + Vite frontend
 │   ├── src/
-│   │   ├── App.jsx
-│   │   ├── index.css
+│   │   ├── App.jsx      # UI state machine & components
+│   │   ├── index.css    # Design tokens & responsive styles
 │   │   └── main.jsx
-│   ├── index.html
-│   └── vite.config.js   ← proxy: /api → localhost:3001
+│   ├── index.html       # Zero external CDN links
+│   └── vite.config.js   # Proxy (/api → localhost:3001)
 │
 └── server/          # Express backend
-    ├── index.js     ← entry point, routes
-    └── ollama.js    ← Ollama health check + API helper
+    ├── index.js         # API routes & validation
+    ├── imageProcessor.js# Magic-byte validation & Sharp resizing
+    ├── ollama.js        # Ollama integration & schema validation
+    ├── prompt.js        # System prompt & condition guidelines
+    └── test_runner.js   # Automated test suite
 ```
 
 ---
@@ -87,7 +93,7 @@ cd server
 npm install       # first time only
 npm run dev       # uses node --watch for auto-reload
 ```
-Server starts at **http://localhost:3001**
+Backend starts at **http://localhost:3001**
 
 ### Terminal 2 – Frontend
 ```bash
@@ -95,61 +101,38 @@ cd client
 npm install       # first time only
 npm run dev
 ```
-Vite starts at **http://localhost:5173** (may use 5174+ if 5173 is taken).
+Frontend starts at **http://localhost:5173** (or http://localhost:5179)
 
 Open the URL printed by Vite in your browser.
 
 ---
 
-## Verify Everything Is Working
+## API Endpoints
 
-### Health endpoint (direct)
+### 1. `GET /api/health`
+Checks that the server is active and verifies Ollama daemon and `gemma3:4b` availability.
 ```bash
 curl http://localhost:3001/api/health
 ```
 
-### Health endpoint through the Vite proxy
-```bash
-curl http://localhost:5173/api/health
-```
+### 2. `POST /api/analyze`
+Accepts `multipart/form-data`:
+- `image`: JPEG, PNG, or WebP file (≤ 8 MB). Processed strictly in RAM.
+- `lastWatered`: Context string (e.g. `Today`, `1–3 days ago`, `4–7 days ago`, `More than a week`, `Not sure`).
+- `sunlight`: Context string (e.g. `Direct sun`, `Indirect light`, `Mostly shade`, `Not sure`).
 
-Both should return JSON like:
-```json
-{
-  "status": "ok",
-  "server": "GardenFix backend v0.1",
-  "ollama": {
-    "running": true,
-    "modelReady": true,
-    "requiredModel": "gemma3:4b"
-  }
-}
-```
-
-If `ollama.running` is `false`, start `ollama serve`.  
-If `ollama.modelReady` is `false`, run `ollama pull gemma3:4b`.
-
-The **status banner** at the top of the UI shows the same information visually.
+Returns structured JSON matching the strict validation schema.
 
 ---
 
-## What the Status Banner Tells You
-
-| Colour | Meaning |
-|--------|---------|
-| 🟢 Green | Backend + Ollama + model all ready — full analysis available |
-| 🟡 Yellow | Backend reachable but Ollama or model not ready — see error message |
-| 🔴 Red | Cannot reach the backend — make sure the Express server is running |
-
----
-
-## Phase Roadmap
+## Development & Roadmap
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| **1** | ✅ Done | Frontend + backend skeleton, health endpoint, Vite proxy |
-| **2** | Planned | Wire up `/api/analyze` — send photo + context to Ollama, stream response |
-| **3** | Planned | Polish UI, structured response cards, error recovery |
+| **1. Skeleton** | ✅ Done | Initial Express backend, React Vite frontend, health check, proxy |
+| **2. Analysis Backend** | ✅ Done | Multer in-memory upload, Sharp image pipeline, Ollama `gemma3:4b` integration |
+| **3. Interface & UX** | ✅ Done | Responsive card UI, condition badges, drag-and-drop upload, double-click protection |
+| **4. Quality & Offline** | ✅ Done | Zero external CDN/font calls, automated test runner, edge-case validation |
 
 ---
 
@@ -158,16 +141,20 @@ The **status banner** at the top of the UI shows the same information visually.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` | Express server port |
-| `OLLAMA_URL` | `http://localhost:11434` | Base URL for Ollama API |
-
-Set them before starting the server:
-```bash
-PORT=4000 OLLAMA_URL=http://192.168.1.10:11434 npm run dev
-```
+| `OLLAMA_URL` | `http://localhost:11434` | Base URL for the local Ollama instance |
 
 ---
 
-## Contributing
+## License
 
-This project is part of the Touch Grass open-source AI challenge. PRs welcome.  
-Keep dependencies minimal and code beginner-readable.
+The code in this repository is licensed under the [MIT License](LICENSE).
+
+---
+
+## Gemma Attribution & Model Terms
+
+This application uses **Gemma 3** (`gemma3:4b`), an open-weights multimodal vision-language model developed by **Google DeepMind**.
+
+- **Model Attribution**: Gemma is developed and provided by Google.
+- **Model License**: Gemma models are made available under the [Gemma Terms of Use](https://ai.google.dev/gemma/terms) and the [Gemma Open Model License](https://ai.google.dev/gemma/terms).
+- **Prohibited Uses**: Use of Gemma must comply with Google's Prohibited Use Policy. GardenFix does not modify model weights and connects solely to your locally installed Ollama instance.
