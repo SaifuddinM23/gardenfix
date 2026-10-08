@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+id_rsa*
+*.p12
+*.pfx
+credentials.json
+
+# Logs & debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Uploads, local media & model artifacts
+scratch/
+scratch_tests/
+uploads/
+*.bin
+*.gguf
+*.safetensors
+*.onnx
+models/
+.ollama/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.sublime-workspace
+*.swp
+*.swo
