@@ -1,12 +1,12 @@
 # 🌱 GardenFix
 
 > A local AI plant-care assistant built for the **Touch Grass** open-source AI challenge.  
-> Everything runs entirely on your own machine — no paid APIs, no cloud dependencies, no authentication, and 100% private.
+> Everything runs on your own machine — no paid APIs, no cloud dependencies, no authentication. Designed for local processing; works offline after dependencies and model files are downloaded.
 
 Upload a photo of your plant, tell GardenFix when you last watered it and how much sunlight it gets, and receive:
 
 - **Plant Condition** – assessment of overall visual health (Healthy & Thriving, Mild Stress, Severe Distress / Dying)
-- **Visible Observations** – factual, non-hallucinated findings seen directly in the photo
+- **Visible Observations** – AI observations that may contain errors
 - **Possible Explanations** – tentative causes tailored to your watering history and sunlight
 - **One Practical Outdoor Check** – a physical check with conditional follow-up actions based on what you find
 - **Limitations Notice** – clear transparency about what cannot be determined from a photo alone
@@ -21,7 +21,7 @@ Upload a photo of your plant, tell GardenFix when you last watered it and how mu
 | Backend  | Node.js + Express + Multer (in-memory processing) + Sharp |
 | AI Model | [Ollama](https://ollama.com) running `gemma3:4b` locally |
 | Database | None |
-| Auth / Cloud | None (100% offline-ready) |
+| Auth / Cloud | None (Designed for local processing; works offline after dependencies and model files are downloaded) |
 
 ---
 
