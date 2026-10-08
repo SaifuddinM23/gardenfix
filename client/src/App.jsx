@@ -135,7 +135,10 @@ function UploadZone({ file, preview, onFileChange, disabled }) {
               accept="image/jpeg,image/png,image/webp"
               style={{ display: 'none' }}
               disabled={disabled}
-              onChange={(e) => handleFile(e.target.files[0])}
+              onChange={(e) => {
+                if (e.target.files?.[0]) handleFile(e.target.files[0]);
+                e.target.value = '';
+              }}
             />
           </label>
           <button
@@ -177,10 +180,14 @@ function UploadZone({ file, preview, onFileChange, disabled }) {
           id="photo-input"
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          style={{ display: 'none' }}
           disabled={disabled}
           aria-hidden="true"
           tabIndex={-1}
-          onChange={(e) => handleFile(e.target.files[0])}
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleFile(e.target.files[0]);
+            e.target.value = '';
+          }}
         />
         <div className="upload-prompt__icon">🌿</div>
         <p className="upload-prompt__main">Tap or drag a photo here</p>
